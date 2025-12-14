@@ -13,8 +13,6 @@ public final class CurrentUser {
         if (auth == null) return null;
         if (!auth.isAuthenticated()) return null;
         if (auth instanceof AnonymousAuthenticationToken) return null;
-
-        // některé setupy mají principal jako "anonymousUser"
         if ("anonymousUser".equals(auth.getPrincipal())) return null;
 
         return auth.getName();

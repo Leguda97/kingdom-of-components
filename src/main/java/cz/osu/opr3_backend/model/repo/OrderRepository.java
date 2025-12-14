@@ -6,7 +6,7 @@ import java.util.Optional;
 import java.util.List;
 
 public interface OrderRepository extends JpaRepository<Order, Long> {
-    // moje objednávky
+    // objednávky aktivního uživatele
     List<Order> findAllByOwner_UsernameOrderByCreatedAtDesc(String username);
     Optional<Order> findByIdAndOwner_Username(Long id, String username);
 

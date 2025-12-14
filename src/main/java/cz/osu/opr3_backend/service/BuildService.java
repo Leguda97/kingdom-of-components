@@ -114,14 +114,13 @@ public class BuildService {
         Product product = productRepository.findById(req.productId())
                 .orElseThrow(() -> new NotFoundException("Product " + req.productId() + " not found"));
 
-        // Merge existing
         for (BuildItem bi : build.getItems()) {
             if (bi.getProduct().getId().equals(product.getId())) {
                 int oldQty = bi.getQuantity();
                 int newQty = oldQty + req.quantity();
                 bi.setQuantity(newQty);
 
-                // limits (CPU/GPU/PSU/CASE max 1, RAM max 4)
+                // limity (CPU/GPU/PSU/CASE max 1, RAM max 4)
                 try {
                     enforceCategoryLimitsOrThrow(build);
                 } catch (BuildValidationException e) {
@@ -139,7 +138,7 @@ public class BuildService {
             }
         }
 
-        // New item
+        // Nový Item
         BuildItem item = BuildItem.builder()
                 .build(build)
                 .product(product)
@@ -207,7 +206,7 @@ public class BuildService {
             throw new IllegalStateException("Build " + buildId + " is empty");
         }
 
-        // Stock check
+        // Kontrola skladu
         for (BuildItem bi : build.getItems()) {
             Product p = bi.getProduct();
             int requested = bi.getQuantity();
@@ -238,7 +237,7 @@ public class BuildService {
 
             order.getItems().add(oi);
 
-            // subtract stock
+            // odebreme ze skladu
             int current = (p.getStock() == null) ? 0 : p.getStock();
             p.setStock(current - bi.getQuantity());
         }

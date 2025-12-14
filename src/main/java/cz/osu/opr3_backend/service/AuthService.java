@@ -24,7 +24,7 @@ public class AuthService {
     private final JwtService jwtService;
 
     public AuthResponse register(AuthRegisterRequest req) {
-        String actor = SecurityUtils.usernameOrAnonymous(); // většinou "anonymous"
+        String actor = SecurityUtils.usernameOrAnonymous();
 
         if (userRepository.existsByUsername(req.username())) {
             log.warn("AUDIT AUTH_REGISTER_DENIED actor={} reason=username_exists username={}", actor, req.username());
@@ -52,7 +52,7 @@ public class AuthService {
     }
 
     public AuthResponse login(AuthLoginRequest req) {
-        String actor = SecurityUtils.usernameOrAnonymous(); // "anonymous"
+        String actor = SecurityUtils.usernameOrAnonymous();
 
         User user = userRepository.findByUsername(req.username())
                 .orElseThrow(() -> {

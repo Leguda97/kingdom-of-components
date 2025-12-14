@@ -41,7 +41,6 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiError> handleDataIntegrity(DataIntegrityViolationException ex, HttpServletRequest req) {
         String message = "Data integrity violation";
 
-        // Zkusime rozpoznat nas unikátní constraint na SKU
         String mostSpecific = ex.getMostSpecificCause() != null ? ex.getMostSpecificCause().getMessage() : null;
         if (mostSpecific != null && mostSpecific.contains("ux_product_sku")) {
             message = "Product with this SKU already exists";
