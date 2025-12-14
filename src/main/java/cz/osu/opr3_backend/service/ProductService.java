@@ -2,8 +2,11 @@ package cz.osu.opr3_backend.service;
 
 import cz.osu.opr3_backend.model.entity.Product;
 import cz.osu.opr3_backend.model.repo.ProductRepository;
+import cz.osu.opr3_backend.security.SecurityUtils;
 import cz.osu.opr3_backend.web.dto.ProductCreateRequest;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -12,9 +15,13 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ProductService {
 
+    private static final Logger log = LoggerFactory.getLogger(ProductService.class);
+
     private final ProductRepository productRepository;
 
     public Product create(ProductCreateRequest req) {
+        String actor = SecurityUtils.usernameOrAnonymous();
+
         Product p = Product.builder()
                 .sku(req.sku())
                 .name(req.name())
@@ -23,7 +30,13 @@ public class ProductService {
                 .stock(req.stock())
                 .spec(req.spec())
                 .build();
-        return productRepository.save(p);
+
+        Product saved = productRepository.save(p);
+
+        log.info("AUDIT PRODUCT_CREATE actor={} productId={} sku={} category={} price={} stock={}",
+                actor, saved.getId(), saved.getSku(), saved.getCategory(), saved.getPrice(), saved.getStock());
+
+        return saved;
     }
 
     public Product get(Long id) {
@@ -32,11 +45,13 @@ public class ProductService {
     }
 
     public Product update(Long id, ProductCreateRequest req) {
-        // Najdeme existující produkt, nebo vyhodíme 404
-        Product existing = productRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Product " + id + " not found"));
+        String actor = SecurityUtils.usernameOrAnonymous();
 
-        // Aktualizujeme jeho vlastnosti
+        Product existing = get(id);
+
+        String oldSku = existing.getSku();
+        Integer oldStock = existing.getStock();
+
         existing.setSku(req.sku());
         existing.setName(req.name());
         existing.setCategory(req.category());
@@ -44,15 +59,50 @@ public class ProductService {
         existing.setStock(req.stock());
         existing.setSpec(req.spec());
 
-        // Uložíme změny
-        return productRepository.save(existing);
+        Product saved = productRepository.save(existing);
+
+        log.info("AUDIT PRODUCT_UPDATE actor={} productId={} oldSku={} newSku={} oldStock={} newStock={}",
+                actor, saved.getId(), oldSku, saved.getSku(), oldStock, saved.getStock());
+
+        return saved;
     }
 
     public void delete(Long id) {
-        Product existing = productRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Product " + id + " not found"));
+        String actor = SecurityUtils.usernameOrAnonymous();
 
+        Product existing = get(id);
         productRepository.delete(existing);
+
+        log.warn("AUDIT PRODUCT_DELETE actor={} productId={} sku={} name={}",
+                actor, existing.getId(), existing.getSku(), existing.getName());
+    }
+
+    public Product updateStock(Long id, Integer stock) {
+        String actor = SecurityUtils.usernameOrAnonymous();
+
+        Product p = get(id);
+        Integer old = p.getStock();
+
+        p.setStock(stock);
+        Product saved = productRepository.save(p);
+
+        log.info("AUDIT PRODUCT_STOCK_UPDATE actor={} productId={} sku={} oldStock={} newStock={}",
+                actor, saved.getId(), saved.getSku(), old, stock);
+
+        return saved;
+    }
+
+    public List<Product> findAll(Product.Category category, String q) {
+        if (category != null && q != null && !q.isBlank()) {
+            return productRepository.findByCategoryAndNameContainingIgnoreCase(category, q);
+        }
+        if (category != null) {
+            return productRepository.findByCategory(category);
+        }
+        if (q != null && !q.isBlank()) {
+            return productRepository.findByNameContainingIgnoreCase(q);
+        }
+        return productRepository.findAll();
     }
 
     public List<Product> list() {

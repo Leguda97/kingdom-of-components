@@ -1,15 +1,16 @@
 package cz.osu.opr3_backend.web.error;
 
-import cz.osu.opr3_backend.service.NotFoundException;
+import cz.osu.opr3_backend.service.*;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.dao.DataIntegrityViolationException;
-
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
@@ -53,6 +54,75 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiError> handleGeneric(Exception ex, HttpServletRequest req) {
         return build(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage(), req.getRequestURI(), null);
     }
+
+    @ExceptionHandler(IllegalStateException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public ApiError handleIllegalState(IllegalStateException ex, HttpServletRequest req) {
+        return ApiError.of(
+                HttpStatus.CONFLICT,
+                ex.getMessage(),
+                req.getRequestURI()
+        );
+    }
+
+    @ExceptionHandler(OutOfStockException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public ApiError handleOutOfStock(OutOfStockException ex, HttpServletRequest req) {
+        Map<String, Object> details = new HashMap<>();
+        details.put("productId", ex.getProductId());
+        details.put("requested", ex.getRequested());
+        details.put("available", ex.getAvailable());
+
+        return ApiError.of(
+                HttpStatus.CONFLICT,
+                ex.getMessage(),
+                req.getRequestURI(),
+                details
+        );
+    }
+
+    @ExceptionHandler(OrderStateException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public ApiError handleOrderState(OrderStateException ex, HttpServletRequest req) {
+        return ApiError.of(
+                HttpStatus.CONFLICT,
+                ex.getMessage(),
+                req.getRequestURI()
+        );
+    }
+
+    @ExceptionHandler(BuildValidationException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public ApiError handleBuildValidation(BuildValidationException ex, HttpServletRequest req) {
+        Map<String, Object> details = new HashMap<>();
+        details.put("reasons", ex.getReasons());
+
+        return ApiError.of(
+                HttpStatus.CONFLICT,
+                ex.getMessage(),
+                req.getRequestURI(),
+                details
+        );
+    }
+
+    @ExceptionHandler(UnauthorizedException.class)
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    public ApiError handleUnauthorized(UnauthorizedException ex, HttpServletRequest req) {
+        return ApiError.of(HttpStatus.UNAUTHORIZED, ex.getMessage(), req.getRequestURI(), null);
+    }
+
+    @ExceptionHandler(ConflictException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public ApiError handleConflict(ConflictException ex, HttpServletRequest req) {
+        return ApiError.of(HttpStatus.CONFLICT, ex.getMessage(), req.getRequestURI(), null);
+    }
+
+    @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public ApiError handleOptimistic(ObjectOptimisticLockingFailureException ex, HttpServletRequest req) {
+        return ApiError.of(HttpStatus.CONFLICT, "Data changed by another request. Please retry.", req.getRequestURI(), null);
+    }
+
 
     private ResponseEntity<ApiError> build(HttpStatus status, String message, String path, Map<String, Object> details) {
         ApiError error = new ApiError(

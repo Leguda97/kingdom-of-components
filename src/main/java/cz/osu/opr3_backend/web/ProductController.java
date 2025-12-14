@@ -4,6 +4,7 @@ import cz.osu.opr3_backend.model.entity.Product;
 import cz.osu.opr3_backend.service.ProductService;
 import cz.osu.opr3_backend.web.dto.ProductCreateRequest;
 import cz.osu.opr3_backend.web.dto.ProductResponse;
+import cz.osu.opr3_backend.web.dto.ProductStockUpdateRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -35,8 +36,12 @@ public class ProductController {
 
     // GET /api/products – seznam všech produktů
     @GetMapping
-    public List<ProductResponse> list() {
-        return productService.list().stream()
+    public List<ProductResponse> getAll(
+            @RequestParam(required = false) Product.Category category,
+            @RequestParam(required = false) String q
+    ) {
+        return productService.findAll(category, q)
+                .stream()
                 .map(ProductResponse::of)
                 .toList();
     }
@@ -47,6 +52,11 @@ public class ProductController {
                                   @RequestBody @Valid ProductCreateRequest req) {
         Product updated = productService.update(id, req);
         return ProductResponse.of(updated);
+    }
+
+    @PutMapping("/{id}/stock")
+    public ProductResponse updateStock(@PathVariable Long id, @RequestBody @Valid ProductStockUpdateRequest req) {
+        return ProductResponse.of(productService.updateStock(id, req.stock()));
     }
 
     // DELETE /api/products/{id} – smazání produktu
